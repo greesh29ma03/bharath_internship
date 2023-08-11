@@ -1,0 +1,66 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+# Temporary data storage (replace with a database in a real project)
+users = {}
+tasks = []
+
+class User:
+    def __init__(self, user_id, username):
+        self.user_id = user_id
+        self.username = username
+        self.assigned_tasks = []
+
+class Task:
+    def __init__(self, task_id, title, description, assigned_to):
+        self.task_id = task_id
+        self.title = title
+        self.description = description
+        self.assigned_to = assigned_to
+
+# Create a new user
+def create_user(user_id, username):
+    users[user_id] = User(user_id, username)
+
+# Create a new task
+def create_task(task_id, title, description, assigned_to):
+    tasks.append(Task(task_id, title, description, assigned_to))
+    users[assigned_to].assigned_tasks.append(task_id)
+
+# Get user's assigned tasks
+def get_assigned_tasks(user_id):
+    user = users.get(user_id)
+    if user:
+        assigned_task_details = []
+        for task_id in user.assigned_tasks:
+            task = next((task for task in tasks if task.task_id == task_id), None)
+            if task:
+                assigned_task_details.append({
+                    "task_id": task.task_id,
+                    "title": task.title,
+                    "description": task.description
+                })
+        return assigned_task_details
+    return []
+
+# API endpoints
+@app.route('/create_user', methods=['POST'])
+def handle_create_user():
+    data = request.json
+    create_user(data['user_id'], data['username'])
+    return jsonify(message="User created successfully")
+
+@app.route('/create_task', methods=['POST'])
+def handle_create_task():
+    data = request.json
+    create_task(data['task_id'], data['title'], data['description'], data['assigned_to'])
+    return jsonify(message="Task created successfully")
+
+@app.route('/get_assigned_tasks/<user_id>', methods=['GET'])
+def handle_get_assigned_tasks(user_id):
+    assigned_tasks = get_assigned_tasks(user_id)
+    return jsonify(assigned_tasks)
+
+if __name__ == '__main__':
+    app.run(debug=True)
